@@ -1,0 +1,25 @@
+{
+  "name": "acme-docs",
+  "version": "1.0.0",
+  "description": "Use the starter kit to get your docs deployed and ready to customize.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "mint dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vlukashov/acme-docs.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vlukashov/acme-docs/issues"
+  },
+  "homepage": "https://github.com/vlukashov/acme-docs#readme",
+  "devDependencies": {
+    "mint": "^4.2.140"
+  }
+}
