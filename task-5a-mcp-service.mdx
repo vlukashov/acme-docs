@@ -1,0 +1,75 @@
+---
+title: "Task 5a: Implement a Model Context Protocol (MCP) Service"
+---
+
+## Overview
+
+To participate in agentic chat, your product needs to expose tools that the agent can call. These tools come from either:
+
+- An MCP server you implement, or
+
+- An OpenAPI specification derived from your existing API (we’ll auto-convert it using FastMCP).
+
+- The Federated Data Access Layer (DAL). The DAL automatically provides tools via a built-in MCP Server.
+
+All three approaches give the agent a standard way to interact with your product. In all three cases, you should take care to consider what data you are presenting to the agent and how you want the agent to make use of that data.
+
+## Design for Agents
+
+Agentic interactions aren’t just about connecting an API. The goal is to let users complete meaningful workflows across products in plain language. That means your tools should be:
+
+- Relevant – focus on actions users would naturally request in conversation, not your entire API surface.
+
+- Clear – use names, descriptions, and parameters that make sense to a human.
+
+- Secure – enforce authorization so the agent can only do what the user is allowed to do.
+
+- Reliable – handle errors and edge cases gracefully.
+
+A thoughtful design makes the difference between a helpful agent and a frustrating one.
+
+## Integration Options
+
+You can integrate in three ways:
+
+1. MCP Server
+
+   Build a standalone MCP server that defines your tools. Best if you need control, custom logic, or richer behavior.
+
+2. OpenAPI Specification
+
+   Provide a curated OpenAPI specification, based on your existing API. Don’t include every endpoint—only the ones that make sense in a conversational workflow. We will auto-generate tools from this spec using FastMCP.
+
+3. Federated Data Access Layer (DAL)
+
+   Discussed in step 5b, providing data to the federated GraphQL API automatically provides that data via MCP as well.
+
+## Security and Authorization
+
+All products integrate with the platform’s common authentication layer (handled in Task 1). When the agent calls your tools:
+
+It will send an authorization token issued by that common layer.
+
+Your service must validate and enforce authorization at the tool layer.
+
+This ensures users can only take actions and see data they’re entitled to.
+
+## Getting Started
+
+- Decide what functionality from your product should be agent-accessible.
+
+- Think about user intents (“create an order”, “look up a customer”) instead of mirroring your API surface.
+
+- Choose your integration approach (MCP server or OpenAPI spec).
+
+- Make sure your API or server is ready for agent use:
+
+- Provide a curated set of operations.
+
+- Use clear operation names and descriptions.
+
+- Enforce authorization checks with the provided token.
+
+- Include example inputs and outputs where possible.
+
+Once your service is onboarded, it will be multiplexed by the platform’s MCP Composer and available to the agentic loop.

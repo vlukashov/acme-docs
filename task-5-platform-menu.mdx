@@ -1,0 +1,73 @@
+---
+title: "Task 5: Embed the Platform Menu"
+---
+
+## Overview
+
+The Platform Menu is a reusable web component provided by the platform and delivered via a CDN. It allows product teams to easily embed consistent, up-to-date navigation across applications without duplicating logic or design. This guide walks you through the integration process, including installation, usage, and configuration options. By the end, you’ll have the Platform Menu running in your application with minimal setup.
+
+---
+
+## Integration Steps
+
+### 1. Install / Include the Component
+
+Add the Platform Menu web component to your application by including the script from the CDN:
+
+```html
+<html lang="en">
+  <head>
+    <script
+      type="module"
+      src="https://cdn.dev.saas.acme.com/solis_ui/v1/nav/solis-nav.es.js"
+    ></script>
+  </head>
+</html>
+```
+
+### 2. Configure the Menu
+
+The menu supports configuration through attributes and properties on `window._solis` object. Below is an example:
+
+```html
+<html lang="en">
+  <head>
+    <script>
+      window._solis = {
+        is_prod: false,
+        config_url: "/nav/config",
+        deployment_environment: "local",
+        cdn_hostname: "https://cdn.dev.saas.acme.com/solis_ui/v1",
+      };
+    </script>
+  </head>
+</html>
+```
+
+Available attributes:
+
+| Attribute                | Type    | Required | Default | Description                                                                                                                                                                                                                   |
+| ------------------------ | ------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `is_prod`                | Boolean | ❌       | True    | Whether or not menu platform should use mock data for profile and one switch content.                                                                                                                                         |
+| `config_url`             | String  | ✅       | N/A     | Route containing left nav items full list of options can be found [here](https://github.acme.com/acme-saas-platform/software-platform-feature-specs/blob/main/SimplifiedPlatform/UI/WebComponentProperties.md#platform-shell) |
+| `deployment_environment` | String  | ✅       | Dev     | Environment parent application is running in. Available options are local,dev,stage,prod.                                                                                                                                     |
+| `cdn_hostname`           | String  | ✅       | N/A     | CDN URL used to inject component.                                                                                                                                                                                             |
+
+### 3. Install / Include the Component
+
+Embed the menu component into your application:
+
+```html
+<html lang="en">
+  <body>
+    <solis-nav />
+    <main>
+      <!-- Your application content here -->
+    </main>
+  </body>
+</html>
+```
+
+## Next Steps
+
+Once the platform menu is implemented, proceed to [Deploy sidekick](./task-6-sidekick).

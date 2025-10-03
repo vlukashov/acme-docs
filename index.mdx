@@ -3,16 +3,15 @@ title: "Overview"
 description: "A practical guide on how to adopt the MCSP Platform"
 ---
 
-
 The Platform consists of three elements that augment the user experience of any product.
 
 ![Banner](/images/banner.png)
 
 These are:
 
-1. The login button
-2. The Platform Menu
-3. The Sidekick
+1. The Login button
+1. The Platform Menu
+1. The Sidekick
 
 Example code to back these elements are available by cloning this repo.
 
@@ -23,21 +22,18 @@ git clone git@github.acme.com:srajagopalan/how-to-platform.git
 You can also use our language bindings to import this code directly into your project if you
 are working in either TypeScript or Golang. If you wish to contribute bindings for any other language, please reach out!
 
-In order to integrate these three elements into your user experience, you need to perform 6 tasks. This repo
-contains a "How To" guide for each of the 6 tasks as well as example code in TypeScript and Golang. You are welcome
-to use the example code in your projects (copy and paste things you need). All the code herein is authored by Acmers and therefore
-are available to use.
+In order to integrate these three elements into your user experience, you need to perform the tasks described below. This repo contains a "How To" guide for each of these tasks as well as example code in TypeScript and Golang. You are welcome
+to use the example code in your projects (copy and paste things you need). All the code herein is authored by Acmers and therefore available to use.
 
-1. Onboard to [MCSP user management](task-1-onboard-mcsp)
-1. Implement the [Login Button](task-2-login-button)
-1. Embed the [platform menu](task-3-platform-menu)
-1. Implement the standardized data access layer. For sidekick widgets the REST/GraphQL Interface is required. For agentic chat only the MCP Service is required. You can choose to implement either one, or both.
-    1. [MCP Service](task-4a-mcp-service)
-    1. [REST/GraphQL Interface](task-4b-data-access-config)
-1. Embed the [sidekick](task-5-sidekick)
-1. Implement [metering](task-6-implement-metering)
-
-Before you start, it might help to read about [work with MCSP](working-with-mcsp).
+1. Onboard to [Core Business Services](./task-1-onboard-core-bus-service)
+1. Onboard to [Identity and Access Management](./task-2-onboard-iam)
+1. Onboard to [Usage Metering](./task-3-implement-metering)
+1. Embed the [Login Button](./task-4-login-button)
+1. Embed the [Platform menu](./task-5-platform-menu)
+1. Implement the standardized data access layer (DAL). For sidekick widgets the REST/GraphQL Interface is required. For agentic chat only the MCP Service is required. You can choose to implement either one, or both.
+   - [MCP Service](./task-5a-mcp-service)
+   - [REST/GraphQL Interface](./task-5b-data-access-config)
+1. Embed the [Sidekick](./task-6-sidekick)
 
 ## Task Dependencies
 
@@ -45,18 +41,13 @@ The tasks have the following dependencies:
 
 ```mermaid
 graph TD
-    A[Task 1: Onboard to MCSP] --> B[Task 2: Login Button]
-    A --> F[Task 6: Metering]
-    B --> C[Task 3: Platform Menu]
-    B --> D[Task 4: Data Access Layer]
-    D --> E[Task 5: Sidekick]
-
-    style A fill:#e1f5fe,stroke:#333,color:#000
-    style B fill:#fff3e0,stroke:#333,color:#000
-    style C fill:#f3e5f5,stroke:#333,color:#000
-    style D fill:#e8f5e8,stroke:#333,color:#000
-    style E fill:#fff8e1,stroke:#333,color:#000
-    style F fill:#fce4ec,stroke:#333,color:#000
+    A[Core Business Services] --> B[Identity and Access]
+    A --> C[Metering]
+    B --> D[Login Button]
+    B --> E[Platform Menu]
+    C --> E
+    B --> F[Data Access Layer]
+    F --> G[Sidekick]
 ```
 
 ## Code Examples

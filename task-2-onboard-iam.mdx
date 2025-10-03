@@ -1,0 +1,141 @@
+---
+title: "Task 2: Onboard to Platform Identity and Access Management"
+---
+
+## Overview
+
+The platform provides support for Identity and Access management (IAM). This consists of two independent services, the authentication service, and the authorization (aka the Account IAM) service. The authentication service is powered by Acme Security Verify (ISV), which is a single-sign-on service and identity broker, generating an authentication token for a user after they are logged in. Users can be authenticated with the platform built-in identity source, backed by AcmeID, or with a customer-requested identity provider. The platform `authorization service` integrates with ISV, manages access policy, provides an authorization token, and policy decision endpoint (PDP) API.
+
+To enable single sign-on (SSO) products are expected to adopt the platform-provided authentication. Products may opt-in to the platform authorization and user access management. For products using their own authorization and access control, integration using the platform-provided `OneSwitcher` requires them to identify users to the platform access control service that they are in the `service user` role that the platform IAM requires to identify the user has some access.
+
+![IAM](/images/iam.png)
+
+This section describes the steps required to adopt platform IAM and login with default identity source, Acmeid for Commercial. For Fedramp/Govcloud the default identity source is ISV's built-in user directory. There is a minor integration difference to support login with a customer-requested identity provider. The steps for this are provided in a separate task outside the set of steps described here.
+
+## Developers getting started implementation steps
+
+### Step 1: Request an OpenID Connect (OIDC) Client
+
+Open a [support ticket](https://github.acme.com/acme-saas-platform/dev-support/issues) and include the following minimum information:
+
+- **Environment**: development, staging, pre-production, production, commercial, Fedramp, ProtectedB
+- **OIDC post login re-direct_uri**
+- **Contact person emails**
+- **Client ID** (if reusing a previously requested client)
+
+The platform IAM team will provide you with the OIDC client metadata, including:
+
+- `client_id`
+- `client_secret`
+- Discovery URL
+
+### Step 2: Update Product Registration Form
+
+Follow this sample [link](https://github.acme.com/automation-paas-cd-pipeline/testpak-product-enablement/blob/master/resources/templates/product-registration.yaml#L65) to update the product registration form.
+
+Update lines 65, 66, and 67 as illustrated:
+
+```yaml
+IAM:
+  v2: true # this attribute is used to identify whether or not a product is using the MCSP IAM v2 integration
+  clientID: client_id # the client_id value obtained in Step 1
+```
+
+### Step 3: Integrate with ISV using the provided OIDC Client metadata
+
+For an unauthenticated user accessing the product service portal, or selecting the Login button, integrate with the OIDC client data you received in Step 1 to initiate user login. This is where you check user security session and initiate new login if there is no existing authentication session.
+
+#### Step 3a: OIDC Relying Party Implementation
+
+Your code acts as an OIDC relying party that:
+
+- Redirects unauthenticated users to ISV to request an OIDC `authorization code`
+
+  This sample code assume that your service does not support use of the Discovery URL programmatically. The Discovery URL you obtained in step 1 returns a json file will. From the json file you can extract authorization_endpoint and token_endpoint.
+
+  Your service needs to pass following parameters to the ISV authorization_endpoint:
+
+  ```
+  response_type=code
+  scope=openid email
+  redirect_uri= <the callback URL to receive authorization code>
+  state=<some random characters. May store some info for tracking as it is returned as it is>
+  client_id=<The client_id received from step 1>
+  ```
+
+  It is recommended to include optional PKCE parameters (see https://datatracker.ietf.org/doc/html/rfc7636)
+
+  ```
+  code_challenge_method=S256&code_challenge=p<some random challenge code>
+  ```
+
+  The URL is like:
+
+```
+  https://console-acme-stg.verify.acme.com/oauth2/authorize?
+  client_id=3eb0......a48&
+  scope=openid profile email&
+  response_type=code&
+  redirect_uri=https://sample.com/auth/login/callback&
+  state=eyJyZXR1cm5UbyI....B0aW9uIjp7fX0&
+  code_challenge_method=S256&code_challenge=6666666
+```
+
+- Exchange authorization code for JWT tokens
+
+  You may use the previously received authorization code and exchange it for OIDC access_token and id_token. If you include `code_challenge` in authorization code request, you must also include `code_verifier` in the token request.
+
+  Here is a sample curl request to exchange the authorization code for an access and identity token:
+
+```bash
+ curl -k -v -X POST -H 'Content-type: application/x-www-form-urlencoded'
+ -d "grant_type=authorization_code&
+     client_id=c.......d&
+     client_secret=L....Ur&
+     redirect_uri=https://example.com/callback&
+     code=7777777&
+     code_verifier=9999"
+     https://console-acme-stg.verify.acme.com/oauth2/token
+```
+
+#### Step 3b: Token Exchange
+
+Invoke the Platform IAM [Token exchange API](https://pages.github.acme.com/acme-saas-platform/account-iam-apidoc/#tag/Authz-Management) to request a platform-issued and signed authorization JWT token for the provided ISV access token/JWT. Here you may use either the access_token or id_token from the previous step as the `JWT` parameter:
+
+```bash
+curl -X 'POST' \
+  'https://account-iam.platform.saas.acme.com/api/2.0/services/<instance id here>/token?' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "jwt": "isv token"
+}'
+```
+
+#### Step 3c: Use Platform issued JWT on IAM API calls
+
+Use the platform JWT as a bearer token to request user access to the requested web resource for services using the Platform provided access management. This token can also be used for platform APIs like [Get User or ServiceID roles](https://pages.github.acme.com/acme-saas-platform/account-iam-apidoc/#operation/getRoleBindingsForIdentity) or the [Policy Decision Point (PDP)](https://pages.github.acme.com/acme-saas-platform/account-iam-apidoc/#tag/Policy-Decision-Point).
+
+```bash
+curl -X 'POST' \
+  'https://your-api' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer <platform token here>'
+```
+
+#### Step 3d: Validate platform JWT token signature
+
+Call the platform provide JWKS endpoint to retrieve signature validation key:
+
+```bash
+curl -X 'GET' \
+  'https://account-iam.platform.saas.acme.com/api/2.0/jwks' \
+  -H 'accept: application/json'
+```
+
+## Next Steps
+
+Once onboarding is complete, you can proceed to:
+
+- [Usage Metering](./task-3-implement-metering)
+- [Login Button](./task-4-login-button)

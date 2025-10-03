@@ -1,0 +1,13 @@
+---
+title: "Task 1c: Onboard to ArgoCD to support configuration updates"
+---
+
+## Overview
+
+Products are required to create a Core Business Services product registration and common service broker yaml files with configuration info about the product. These files are owned by product teams, not the platform. They are managed using Argocd. There are separate files for Build, Staging, and Production Github target repos. Updates to these files trigger a refresh of the product's configurations.
+
+## Developers getting started guidelines
+
+### How to use Argocd to deploy Production registration and CSB CRs
+
+You will need to follow the steps in [Setting up your product enablement repository](https://pages.github.acme.com/acme-saas-platform/MultiCloud-SaaS-Framework/Reference/setting_up_prod_enablement_repo/). This explains the steps needed to enable the automatic application of these CRs on the MCSP data plane cluster.

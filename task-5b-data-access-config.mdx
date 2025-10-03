@@ -1,0 +1,655 @@
+---
+title: "Task 5b: Implement REST/GraphQL Interface - Developer Guide for GraphQL Schema Creation"
+---
+
+## Overview
+
+Implement a REST or GraphQL interface for your data access layer. This approach allows you to use familiar web API patterns, and the platform team will MCPize it for you. This guide provides product teams with step-by-step instructions for developing their own GraphQL schemas that integrate with the Solis Data Access Layer (DAL) federation. Product teams own their individual schemas, while the platform team manages the federation layer.
+
+**Target Audience**: Product development teams  
+**Prerequisites**: Basic understanding of GraphQL, REST APIs, and your product's data architecture
+
+---
+
+## Step 1: Business Metrics-Driven Development Planning
+
+Start with understanding the business metrics and customer experience that will drive your GraphQL schema design.
+
+### Key Activities:
+
+- **UI-First Approach**: Product owners should create Figma designs and Murals to define the customer experience and identify what business metrics will be displayed in the Sidekick UI
+- **Data Correlation Mapping**: Identify how your product data correlates with other onboarded products in the federation
+  - Application IDs, UUIDs, timeframes, or other canonical entities
+  - This is critical for cross-product data federation in Sidekick
+- **Data Source Identification**: Map out where your data lives (databases, REST APIs, etc.) and how your GraphQL schema will access it via StepZen
+
+### Deliverables:
+
+- Figma/Mural designs showing UI requirements
+- Data correlation mapping document
+- Data source inventory and access patterns
+
+---
+
+## Step 2: Sidekick UI Panel Integration Points
+
+Identify which pages in your product will enable the Sidekick panel and what data they'll pass.
+
+### Key Considerations:
+
+- Determine which product pages will include the Sidekick integration
+- Define what correlation data (IDs, time filters, etc.) your product pages will pass to Sidekick
+- Plan how this context data will be used in your GraphQL queries
+
+**Note**: Detailed Sidekick UI adoption documentation is available [here](./task-5-sidekick). This step focuses on understanding the integration points that will inform your GraphQL schema design.
+
+---
+
+## Step 3: Development Environment Setup
+
+Ensure you have the current development environment with existing deliverables before adding your schema.
+
+> **Reference**: For detailed instructions, see: https://w3.acme.com/w3publisher/softwareplatform/platform-components/data-access-layer/solis-dal-test-federated-schema
+
+### 3a. Install the StepZen CLI
+
+```bash
+npm install -g @stepzen/cli
+```
+
+### 3b. Open a trial account for Acme API Connect for GraphQL (a.k.a. StepZen)
+
+https://dashboard.acme.stepzen.com/
+
+### 3c. Log in to Your Product Account
+
+```bash
+stepzen login
+```
+
+Follow the authentication prompts for your product-specific StepZen account.
+
+### 3d. Get the Acme Software Platform DAL Federated Schema
+
+Clone the repository containing all federated schemas:
+
+```bash
+git clone https://github.acme.com/acme-saas-platform/solis-dal/
+cd solis-dal/solis-graphql-schemas
+```
+
+### 3e. Create Environment Configuration
+
+Create a `.env` file with credentials for backend products that do not yet support JWT tokens:
+
+```bash
+cp sample.env .env
+# Edit .env with your product-specific credentials
+```
+
+### 3f. Deploy Federation Environment
+
+Deploy all schemas using the automation script:
+
+```bash
+./bin/deploy-automation.sh --env=dev
+```
+
+See `DEPLOY.md` for detailed deployment options and parameters.
+
+### 3g. Test the Environment
+
+Verify your development environment is working by accessing the federated GraphQL endpoint and running test queries.
+
+**Note**: These instructions are for development environments. For staging/production deployments, your SRE team will set up functional IDs and StepZen accounts.
+
+---
+
+## Step 4: Develop Your GraphQL Schema
+
+Create and deploy your product's GraphQL schema to the Solis DAL repository.
+
+```bash
+git clone https://github.acme.com/acme-saas-platform/solis-dal.git
+cd solis-dal/schema/products
+```
+
+### Repository Access
+
+> **Note**: Instructions for obtaining access to the required repositories will be provided in a separate access management guide.
+
+### Create a Product Directory
+
+Under the `schema/products` directory:
+
+```bash
+mkdir -p [your-product-name]/schema/
+cd [your-product-name]/schema/
+stepzen init --endpoint=solis-dal/[your-product-name]
+```
+
+### File Structure and Purpose
+
+Develop and place your schema in the appropriate product directory:
+
+```
+acme-saas-platform/solis-dal/schema/
+    ├── products/[your-product-name]/schema/[your-schema-name]/
+    │   ├── [your-schema-name].graphql      # Main schema definitions
+    │   ├── config.yaml                     # StepZen configuration
+    │   ├── index.graphql                   # Schema orchestration & federation
+    │   ├── stepzen.config.json            # Deployment configuration
+    │   ├── op-[your-schema-name].graphql  # Query/mutation operations
+    │   ├── README.md                      # Documentation
+    │   └── types/                         # Additional type definitions
+    │       ├── common.graphql
+    │       └── custom-types.graphql
+```
+
+#### `index.graphql` - The Schema Orchestrator
+
+This is the **most critical file** in your schema - it serves as the entry point and orchestrates your entire GraphQL schema:
+
+**Key Directives:**
+
+- **`@sdl`** - Schema Definition Language directive that imports and extends other GraphQL schemas
+
+  ```graphql
+  extend type Query
+    @sdl(files: ["types/common.graphql", "operations/op-users.graphql"])
+  ```
+
+- **`files` parameter** - Specifies which GraphQL files to include in your schema bundle
+
+  ```graphql
+  # Import multiple schema files
+  @sdl(files: [
+    "user-management.graphql",
+    "operations/op-users.graphql",
+    "types/user-types.graphql"
+  ])
+  ```
+
+- **Schema Extension** - Extends the base Query and Mutation types
+
+  ```graphql
+  extend type Query {
+    # Your product-specific queries will be added here
+  }
+
+  extend type Mutation {
+    # Your product-specific mutations will be added here
+  }
+  ```
+
+- **Executable Operations** - Defines how your schema operations are structured
+  ```graphql
+  # Example: Adding your product queries to the schema
+  extend type Query @sdl(files: ["operations/op-applications.graphql"])
+  ```
+
+#### `[your-schema-name].graphql` - Core Schema Definitions
+
+Contains your main GraphQL type definitions, custom types, and business logic:
+
+```graphql
+# Example structure
+type Application {
+  id: ID!
+  name: String!
+  status: ApplicationStatus!
+  metrics: [Metric!]!
+}
+
+enum ApplicationStatus {
+  RUNNING
+  STOPPED
+  ERROR
+}
+```
+
+#### `op-[your-schema-name].graphql` - Operations
+
+Defines the executable queries and mutations with their backend connections using StepZen's powerful directives:
+
+**REST API Integration:**
+
+```graphql
+type Query {
+  # Connect to REST endpoints with authentication
+  applications(filter: ApplicationFilter): [Application!]!
+    @rest(
+      endpoint: "https://your-api.com/v1/applications"
+      headers: [
+        { name: "Authorization", value: "Bearer $jwt" }
+        { name: "Content-Type", value: "application/json" }
+      ]
+      configuration: "your-product-config"
+    )
+
+  # Transform REST responses to GraphQL types
+  applicationMetrics(appId: ID!): ApplicationMetrics
+    @rest(
+      endpoint: "https://your-api.com/v1/applications/$appId/metrics"
+      transforms: [
+        {
+          pathpattern: "data.metrics"
+          editor: "jq: .[] | select(.type == \"performance\")"
+        }
+      ]
+    )
+}
+```
+
+**Database Integration:**
+
+```graphql
+type Query {
+  # Direct database queries
+  userApplications(userId: ID!): [Application!]!
+    @dbquery(
+      type: "postgresql"
+      query: """
+      SELECT app_id, app_name, status, created_at
+      FROM applications
+      WHERE user_id = $1 AND status = 'active'
+      """
+      configuration: "your-db-config"
+    )
+}
+```
+
+**GraphQL Federation:**
+
+```graphql
+type Query {
+  # Federate with other GraphQL schemas
+  enrichedApplicationData(appId: ID!): EnrichedApplication
+    @graphql(
+      endpoint: "https://internal-service.com/graphql"
+      headers: [{ name: "Authorization", value: "Bearer $jwt" }]
+    )
+}
+```
+
+**Materialization & Data Joining:**
+
+```graphql
+type Application {
+  id: ID!
+  name: String!
+  # Automatically join data from different sources
+  owner: User
+    @materializer(
+      query: "userById"
+      arguments: [{ name: "id", field: "ownerId" }]
+    )
+
+  # Complex data transformations
+  performanceScore: Float
+    @sequence(
+      steps: [
+        { query: "applicationMetrics" }
+        { query: "calculatePerformanceScore" }
+      ]
+    )
+}
+```
+
+#### `config.yaml` - StepZen Configuration
+
+Environment-specific settings and backend connection details.
+
+**Note:** REST APIs must adopt the Solis JWT and not require `apikey` in the config.yaml. This information is given below for documentation purposes only as it might be needed during development phases or local testing.
+
+```yaml
+configurationset:
+  # REST API Configuration
+  - configuration:
+      name: your-product-api-config
+      apitoken: STEPZEN_YOUR_PRODUCT_APITOKEN
+      hostname: STEPZEN_YOUR_PRODUCT_HOSTNAME
+      authorization: Bearer STEPZEN_YOUR_PRODUCT_TOKEN
+
+  # Database Configuration
+  - configuration:
+      name: your-product-db-config
+      uri: postgresql://username:password@address:port/dbname
+
+  # External GraphQL Service Configuration
+  - configuration:
+      name: external-graphql-config
+      uri: https://external-service.com/graphql
+      authorization: bearer: STEPZEN_EXTERNAL_SERVICE_TOKEN
+      introspection: true
+```
+
+#### `stepzen.config.json` - Deployment Settings
+
+Deployment and runtime configuration for your schema. In the Solis DAL, these are kept simple:
+
+Pattern: solis-dal/[product-name]
+
+**Example:**
+
+```json
+{
+  "endpoint": "solis-dal/instana"
+}
+```
+
+---
+
+## Real World Examples: Instana Applications Schema
+
+The following examples are taken directly from the production Instana schema to show real-world patterns and best practices in action.
+
+### Example 1: Complete Schema Structure - Instana Applications
+
+**Directory Structure:**
+
+```
+products/instana/schema/applications/
+├── atom.graphql                     # Schema orchestrator using @sdl
+├── applications.graphql             # Core type definitions and operations
+├── entity.graphql                   # Entity type definitions
+├── filter.graphql                   # Input filters and enums
+├── metrics.graphql                  # Metrics-related operations
+├── services.graphql                 # Service-related operations
+├── endpoints.graphql                # Endpoint-related operations
+├── op-applications.graphql          # Main query operations
+├── ../common.graphql               # Shared utilities (timeframe conversion)
+├── ../inject/inject.graphql        # JWT injection and base URL setup
+└── ../config.yaml                  # StepZen configuration
+```
+
+### Example 2: Schema Orchestration with `atom.graphql`
+
+**File: `applications/atom.graphql`**
+
+```graphql
+# WIP in creating recommended style schema
+extend schema
+  @sdl(
+    files: [
+      "entity.graphql"
+      "filter.graphql"
+      "applications.graphql"
+      "metrics.graphql"
+      "services.graphql"
+      "endpoints.graphql"
+    ]
+    visibility: [{ expose: true, types: "Query", fields: "applications" }]
+  )
+```
+
+**Key Features:**
+
+- **`@sdl` directive** orchestrates multiple GraphQL files
+- **`visibility` parameter** controls which fields are exposed in the federation
+- **File organization** separates concerns (entities, filters, operations)
+
+### Example 3: Advanced Query with `@sequence` and `@supplies`
+
+**File: `applications/applications.graphql`**
+
+```graphql
+extend type Query {
+  applications(
+    first: Int! = 10
+    after: String! = ""
+    filter: ApplicationFilter!
+  ): ApplicationConnection
+
+  # _applications fetches applications for all cases of the filter
+  # except when filter id is set.
+  _applications(
+    first: Int! = 10
+    after: String! = ""
+    filter: ApplicationFilter!
+  ): ApplicationConnection
+    @sequence(
+      steps: [
+        {
+          query: "_timeframe"
+          arguments: { name: "frame", argument: "filter.timeFrame" }
+        }
+        {
+          query: "_instana_getApplications"
+          arguments: [
+            { name: "first", argument: "first" }
+            { name: "after", argument: "after" }
+            { name: "nameFilter", argument: "filter.name.eq" }
+            {
+              name: "applicationBoundaryScope"
+              argument: "filter.boundaryScope"
+            }
+          ]
+        }
+      ]
+    )
+    @supplies(
+      query: "applications"
+      if: {
+        src: "$not($exists(filter.id)) or $not(filter.id)"
+        language: JSONATA
+      }
+    )
+}
+```
+
+**Key Features:**
+
+- **`@sequence`** chains multiple operations together
+- **`@supplies`** conditionally provides data for the main `applications` query
+- **JSONATA expressions** for complex conditional logic
+- **Multi-step data transformation** (timeframe → API call)
+
+### Example 4: Complex REST Integration with Pagination
+
+**File: `applications/applications.graphql`**
+
+```graphql
+"""
+https://instana.github.io/openapi/#operation/getApplications
+"""
+_instana_getApplications(
+  first: Int! = 10
+  after: String! = ""
+  nameFilter: String
+  _to: String!
+  _windowSize: String!
+  applicationBoundaryScope: BoundaryScope!
+): ApplicationConnection
+  @rest(
+    use: "instana"
+    path: "/api/application-monitoring/applications"
+    arguments: [
+      { argument: "after", name: "page" }
+      { argument: "first", name: "pageSize" }
+      { argument: "_to", name: "to" }
+      { argument: "_windowSize", name: "windowSize" }
+    ]
+    method: GET
+    pagination: {
+      type: PAGE_NUMBER
+      # total hits seems to be edge count, not pages.
+      setters: [{ field: "total", path: "totalHits" }]
+    }
+    setters: [
+      { field: "_to", path: "adjustedTimeframe.to" }
+      { field: "_windowSize", path: "adjustedTimeframe.windowSize" }
+      { field: "id", path: "items[].id" }
+      { field: "name", path: "items[].label" }
+      { field: "entityType", path: "items[].entityType" }
+      { field: "boundaryScope", path: "items[].boundaryScope" }
+    ]
+  )
+```
+
+**Key Features:**
+
+- **`use: "instana"`** references configuration from `config.yaml`
+- **`path`** specifies the REST endpoint path
+- **`arguments`** maps GraphQL parameters to REST query parameters
+- **`pagination`** handles page-based pagination with total counts
+- **`setters`** maps JSON response fields to GraphQL types
+- **Array mapping** with `items[]` syntax for collections
+
+### Example 5: JWT Injection and Dynamic Configuration
+
+**File: `inject/inject.graphql`**
+
+```graphql
+extend type Query {
+  #
+  # New style injection of the base use and fields use @rest(path:)
+  #
+  _inject_base_url: JSON
+    @inject(
+      on: {
+        expose: true
+        types: "Query"
+        fields: "_instana_application_by_id|_instana_getApplications|_instana_application_actions|_instana_getEvents|_instance_metrics_application|_instana_getApplicationServices|_instana_getApplicationEndpoints"
+      }
+    )
+    @value(
+      script: {
+        language: JSONATA
+        src: """
+        {
+          "url": `$jwt`.instances[product_id = "instana"][0].instance_url
+        }
+        """
+      }
+    )
+}
+```
+
+**Key Features:**
+
+- **`@inject`** injects values into specified fields across multiple operations
+- **`expose: true`** makes the injection available to specified fields
+- **JWT parsing** with JSONATA to extract instance URLs dynamically
+- **Field targeting** with pipe-separated field names
+- **Runtime configuration** based on JWT token contents
+
+### Example 6: Timeframe Conversion Utility
+
+**File: `common.graphql`**
+
+```graphql
+type _TimeFrame {
+  _to: String!
+  _windowSize: String!
+}
+
+extend type Query {
+  _timeframe(frame: TimeFrame!): _TimeFrame
+    @value(
+      script: {
+        language: JSONATA
+        src: """
+        {
+          "_to": $string($toMillis(frame.le)),
+          "_windowSize": $string($toMillis(frame.le) - $toMillis(frame.ge))
+        }
+        """
+      }
+    )
+}
+```
+
+**Key Features:**
+
+- **`@value`** directive for computed values
+- **JSONATA scripting** for complex data transformations
+- **Utility functions** (`$toMillis`) for date/time conversion
+- **Reusable components** shared across multiple operations
+
+### Example 7: Production Configuration
+
+**File: `config.yaml`**
+
+```yaml
+deployment:
+  identity:
+    keys:
+      - algorithm: RS256
+        key: STEPZEN_SOLIS_JWT_CERT
+    claims: [exp, account_id, instances]
+```
+
+**File: `stepzen.config.json`** (Actual Instana Production)
+
+```json
+{
+  "endpoint": "solis-dal/instana"
+}
+```
+
+### Key Patterns to follow:
+
+1. **Multi-step Operations**: Using `@sequence` to chain timeframe conversion with API calls
+2. **Conditional Logic**: `@supplies` with JSONATA expressions for smart query routing
+3. **Advanced Pagination**: Handling page-based pagination with total count mapping
+4. **Dynamic Configuration**: JWT-based URL injection for multi-tenant scenarios
+5. **Data Transformation**: Complex JSON-to-GraphQL field mapping with arrays
+6. **Utility Functions**: Reusable timeframe conversion for consistent API integration
+7. **Federation Visibility**: Controlled exposure of specific fields in the federated schema
+
+These real-world examples demonstrate production-ready patterns that handle complex scenarios like multi-tenant authentication, advanced pagination, conditional query execution, and sophisticated data transformations.
+
+## Development Best Practices and Documentation
+
+Follow the comprehensive best practices and reference materials available at:
+https://w3.acme.com/w3publisher/softwareplatform/platform-components/data-access-layer/solis-dal-data-provider
+
+### Product Documentation:
+
+GraphQL Basics:
+https://www.acme.com/docs/en/api-connect-graphql/saas?topic=schemas-graphql-basics
+
+GraphQL --> REST API:
+https://www.acme.com/docs/en/api-connect-graphql/saas?topic=apis-tutorial-transform-rest-api-graphql
+
+Understanding Directives and customer references:
+https://www.acme.com/docs/en/api-connect-graphql/saas?topic=directives-custom-reference
+https://www.acme.com/docs/en/api-connect-graphql/saas?topic=directives-
+
+### Key Development Guidelines:
+
+- **Schema Structure**: Organize your schema files logically (see existing product examples in the repository)
+- **StepZen Directives**: Leverage `@rest`, `@dbquery`, and `@graphql` directives for backend connectivity
+- **Federation Compatibility**: Ensure your schema is compatible with GraphQL federation standards
+- **Security**: Implement appropriate access controls and authentication patterns
+- **Testing**: Include comprehensive test cases for your schema operations
+
+### Deployment Process:
+
+1. Develop and test your schema locally
+2. Create a pull request to the Solis DAL repository
+3. Follow the established review and approval process
+4. Deploy to development environment for integration testing
+5. Promote through staging to production following established pipelines
+
+---
+
+## Next Steps
+
+After completing your GraphQL schema development:
+
+1. Integrate with Sidekick UI components
+2. Implement monitoring and observability
+3. Set up automated testing and CI/CD pipelines
+4. Plan for ongoing maintenance and updates
+
+## Support and Resources
+
+- **Technical Documentation**: https://w3.acme.com/w3publisher/softwareplatform/platform-components/data-access-layer/solis-dal-data-provider
+- **StepZen/API Connect for GraphQL Documentation**: https://www.acme.com/docs/en/api-connect-graphql/saas
+- **Repository Issues**: Use GitHub issues in the Solis DAL repository for technical questions
+- **Platform Team Contacts**:
+  Product Owner: ravi.jagannathan@acme.com
+  Team Lead: Debasree.Basu@acme.com
+  Engineering: Dan.Debrunner@acme.com, rasara@us.acme.com, jwalczyk@us.acme.com

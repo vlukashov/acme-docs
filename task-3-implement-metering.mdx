@@ -1,20 +1,23 @@
 ---
-title: "Task 6: Implement Metering"
+title: "Task 3: Implement Metering"
 ---
 
 ## Overview
 
 This guide provides step-by-step instructions for implementing metering for your MCSP subscription. Metering enables accurate monitoring, tracking, and reporting of usage data.
 
-## Implementation Steps
+**Note** Use of the metering API requires that the tasks above, product registration and CSB boarding are complete.
 
-### 1. **Create Metering Configuration**
+## Developers getting started implementation steps
+
+### Step 1 Create Metering Configuration
 
 To enable metering, define the metering configuration in your _Product Registration_ YAML file. This configuration instructs MCSP metering service on how to track and process usage data.
 
 Please note: Metering configuration varies by use case (e.g., contract subscription, pay-as-you-go subscription, Acme Cloud usage, or non-Acme Cloud usage).
 
-(1a). For contract-based MCSP subscriptions using the Metering service, ensure your _Product Registration_ YAML file is configured with the following fields. Refer to our [Product Registration Feature Spec](https://github.acme.com/acme-saas-platform/MCSP-feature-specs/blob/main/architecture/feature-specs/offering-enablement/product-registration/product_registration.md) for complete guidance on how to fill in all the fields.
+(1a). For contract-based MCSP subscriptions using the Metering service, ensure your _Product Registration_ YAML file is configured with the following fields. Refer to our [Product Registration CR Doc](./examples/cr-docs/product-registration.md)
+for complete guidance on how to fill in all the fields.
 
 ```
 Required fields
@@ -42,7 +45,7 @@ Optional fields
 (1b). Once the _Product Registration_ YAML file is configured, sync it with ArgoCD to update the _Product Registration_ CR.
 For detailed instructions on syncing your YAML with ArgoCD, please refer to the [Product Registration onboarding doc](https://github.acme.com/acme-saas-platform/MultiCloud-SaaS-Framework/blob/main/docs/MCSP_Services/Development_Services/product_registration.md).
 
-### 2. **Submit Metering Data**
+### Step 2 Submit Metering Data
 
 Use the REST API to send usage records to the metering API endpoint.
 
@@ -50,29 +53,23 @@ Use the REST API to send usage records to the metering API endpoint.
 
 (2b). Refer to this [instruction page](<https://pages.github.acme.com/acme-saas-platform/account-iam-apidoc/#tag/AssistantKey-(Public)/paths/~1api~12.0~1%7BscopeCollectionType%7D~1%7BscopeId%7D~1assistantKeys~1token/post>) to use your API key to generate an access token.
 
-(2c). Once you have generated your access token, use it to submit usage data to the Metering API.
+(2c). Once you have generated your access token, use it to submit usage data to the Metering API. - Refer to our [playbook examples](https://pages.github.acme.com/acme-saas-platform/MultiCloud-SaaS-Framework/MCSP_Services/Development_Services/metering_apis/api_3.0_metering_examples/) for guidance on submitting usage according to your specific use case. We recommend using API version 3.0, the latest and most up-to-date release. - Metering API endpoints are environment-specific—please consult the [endpoint list](https://pages.github.acme.com/acme-saas-platform/MultiCloud-SaaS-Framework/MCSP_Services/Development_Services/metering_apis/api_metering/) and ensure you use the correct endpoint for your environment. - The Metering POST API accepts usage data only for the 24-hour period preceding the current time.
 
-- Refer to our [playbook examples](https://pages.github.acme.com/acme-saas-platform/MultiCloud-SaaS-Framework/MCSP_Services/Development_Services/metering_apis/api_3.0_metering_examples/) for guidance on submitting usage according to your specific use case. We recommend using API version 3.0, the latest and most up-to-date release.
-- Metering API endpoints are environment-specific—please consult the [endpoint list](https://pages.github.acme.com/acme-saas-platform/MultiCloud-SaaS-Framework/MCSP_Services/Development_Services/metering_apis/api_metering/) and ensure you use the correct endpoint for your environment.
-- The Metering POST API accepts usage data only for the 24-hour period preceding the current time.
-
-### 3. **Validate Metering Data**
+### Step 3: Validate Metering Data
 
 After submitting usage, validate it using the self-serve GET APIs.
 
 (3a). Confirm that raw usage has been received and stored in our Metering database using [GET Raw Usage API by Transaction ID](https://pages.github.acme.com/acme-saas-platform/consumption-metrics-backend/#operation/UsageByTransactionQueryParams) or [GET Raw Usage API by Instance ID](https://pages.github.acme.com/acme-saas-platform/consumption-metrics-backend/#operation/GetInstanceUsagePayloadV3).
 
-(3b). Verify that your usage has been processed by Metering serivce (CMM) and view the correct aggregated daily usage using the [GET Daily Usage API by Instance ID](https://pages.github.acme.com/acme-saas-platform/consumption-metrics-backend/#operation/GetDailyInstanceUsagePayloadV3).
-
-- The Metering service (CMM) checks contract subscription usage once per day and aggregates the full-day usage from the previous day. For example, on June 20 it processes usage for June 19. Usage already checked within the past 24 hours is not reprocessed.
+(3b). Verify that your usage has been processed by Metering serivce (CMM) and view the correct aggregated daily usage using the [GET Daily Usage API by Instance ID](https://pages.github.acme.com/acme-saas-platform/consumption-metrics-backend/#operation/GetDailyInstanceUsagePayloadV3). - The Metering service (CMM) checks contract subscription usage once per day and aggregates the full-day usage from the previous day. For example, on June 20 it processes usage for June 19. Usage already checked within the past 24 hours is not reprocessed.
 
 (3c). Validate aggregated monthly and total usage using the [GET Monthly Usage API](https://pages.github.acme.com/acme-saas-platform/consumption-metrics-backend/#operation/UsageQueryParamsV1).
 
 Please refer to the [playbook examples](https://pages.github.acme.com/acme-saas-platform/MultiCloud-SaaS-Framework/MCSP_Services/Development_Services/metering_apis/api_metering/) for comprehensive guidance and sample requests for each of the Metering APIs.
 
-### 4. **View Data in Portal**
+### Step 4: View Data in SaaS Management Console
 
-Visit the MCSP portal to see the metering information you have submitted. The portal provides:
+Visit the MCSP SaaS console to see the metering information you have submitted. This UI provides:
 
 - Real-time usage dashboards
 - Historical usage trends
@@ -81,4 +78,4 @@ Visit the MCSP portal to see the metering information you have submitted. The po
 
 ## Next Steps
 
-Congratulations! You have successfully completed all 6 tasks for integrating the MCSP Platform into your application.
+Once onboarding to metering is complete, you can proceed to how to [Implement the login button](./task-4-login-button)

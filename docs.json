@@ -17,14 +17,17 @@
             "group": "Getting started",
             "pages": [
               "index",
-              "task-1-onboard-mcsp",
-              "task-2-login-button",
-              "task-3-platform-menu",
-              "task-4a-mcp-service",
-              "task-4b-data-access-config",
-              "task-5-sidekick",
-              "task-6-implement-metering",
-              "working-with-mcsp"
+              "task-1-onboard-core-bus-service",
+              "task-1a-onboard-product-registration",
+              "task-1b-onboard-csb",
+              "task-1c-argocd",
+              "task-2-onboard-iam",
+              "task-3-implement-metering",
+              "task-4-login-button",
+              "task-5-platform-menu",
+              "task-5a-mcp-service",
+              "task-5b-data-access-config",
+              "task-6-sidekick"
             ]
           }
         ]

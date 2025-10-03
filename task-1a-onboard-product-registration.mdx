@@ -1,0 +1,31 @@
+---
+title: "Task 1a: Onboard to Product Registration"
+---
+
+## Overview
+
+Products are required to create a core business services product registration yaml file with configuration info for the product. The ownership of this file is the offering's product management team. It contains the following data:
+
+- product PID, service ID, and part numbers
+- product billing options (ie: contract, contract+overage, and pay-as-you go)
+- product usage metrics and related information related to how usage metering is configured (ie: usage aggregation process such as HWM, total to date, etc)
+- mail templates for sending customers notifications for overage, etc
+- other product level info including whether platform user access management is in use
+
+Refer to [Product registration feature spec details](https://github.acme.com/acme-saas-platform/MCSP-feature-specs/blob/main/architecture/feature-specs/offering-enablement/product-registration/product_registration.md) for the complete documentation that Product Managers can use to configure their full product registration YAML and CR.
+
+## Developers getting started guidelines
+
+For developers getting started, refer to the samples showing a product registration template and values file. The values file merged over the template to produce the file CR yaml.
+
+[Sample product registration template file](./examples/yamls/prod-registration-template.yaml)
+
+[Sample product registration values file](./examples/yamls/prod-registration-values.yaml)
+
+Refer to [Using ArgoCD to deliver configuration](./task-1c-argocd) to manage the deployment of your Product registration CR using Argocd.
+
+It is recommended that you review this document and [Product Registration CR documentation](./examples/cr-docs/product-registration.md) where all the options are described to understand what is configurable with the platform. This will be referred to through the steps here to demonstrate how to enable various capabilities such as `Product Custom Roles` which are described on the doc on [Onboarding to IAM](./task-2-onboard-iam).
+
+## Next Steps
+
+Once you have setup a product registration yaml, proceed to the [Onboarding to Common Service Broker](./task-1b-onboard-csb) task to continue your onboarding.
