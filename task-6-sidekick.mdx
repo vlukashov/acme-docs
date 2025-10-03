@@ -1,0 +1,60 @@
+---
+title: "Task 6: Embed the Sidekick"
+---
+
+## Overview
+
+Sidekick is a reusable web component provided by the platform and delivered via a CDN. This guide walks you through the integration process, including installation, usage, and configuration options. By the end, you’ll have Sidekick running in your application with minimal setup.
+
+### 1. Install / Include the Component
+
+Add the Platform Menu web component to your application by including the script from the CDN:
+
+```html
+<html lang="en">
+  <head>
+    <script
+      type="module"
+      src="https://cdn.dev.saas.acme.com/solis_ui/v1/sidekick/solis-sidekick.es.js"
+    ></script>
+  </head>
+</html>
+```
+
+### 2. Install / Include the Component
+
+Embed the menu component into your application:
+
+```html
+<html lang="en">
+  <body>
+    <main>
+      <!-- Your application content here -->
+
+      <solis-sidekick
+        correlation_id="Quote of the Day"
+        title="Quote of the Day"
+        context="application"
+        product="instana"
+      />
+    </main>
+  </body>
+</html>
+```
+
+### 3. Configuring Sidekick
+
+Sidekick supports the following attributes:
+
+| Attribute        | Type     | Required | Description                                                                                                                                 |
+| ---------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `correlation_id` | `string` | ✅ Yes   | Specifies the Application/Infrastructure ID.                                                                                                |
+| `title`          | `string` | ✅ Yes   | Specifies the application/infrastructure name where the solis-sidekick is integrated.                                                       |
+| `product`        | `string` | ✅ Yes   | Which product consuming the Sidekick.                                                                                                       |
+| `context`        | `string` | ❌ No    | Specifies which kind of widgets and teasers should be rendered in the Sidekick. `application` or `infrastructure` Defaults to `application` |
+| `trigger_bottom` | `string` | ❌ No    | Number of REM from the bottom for placement of the Sidekick trigger.                                                                        |
+| `enable_button`  | `string` | ❌ No    | Controls enabling of the Sidekick trigger button. It is enabled by default and disabled if this value is `false`                            |
+
+## Next Steps
+
+Congratulations! You have successfully completed all 6 tasks for integrating the MCSP Platform into your application

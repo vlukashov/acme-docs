@@ -1,0 +1,32 @@
+---
+title: "Task 1: Onboarding to MCSP Core Business Services"
+---
+
+## Overview
+
+This page provides guidance on how to work with MCSP platform core business services.
+
+There are two YAML files required to board the platform:
+
+1. The `Product registration YAML` that defines how the platform identifies your product once it is deployed. This includes identity, metering, access & user management, and other business-focused functions.
+2. The `Common Service broker YAML` that defines the product's service broker that is used for service instance lifecycle events (service provision, deprovsion, update).
+
+You are required to maintain both of these documents within a `git` repository on `github.acme.com`. Changes to these is managed with a Gitops process. Updates to these YAML files, drive changes in the platform Core Business Service runtime. ArgoCD is used to push updates to a git repository and the changes automatically trigger a build, updating the runtime to make the changes effective. The build process works across three environments: `dev`, `staging`, and `production`. Based on how you configure ArgoCD, you can control when changes get pushed to each of these environments.
+
+The following is a cookbook for how to author basic versions of these YAML files and how to deploy a simple ArgoCD-based pipeline to push your product to these environments. These are meant to be examples—you can change and modify them to meet your specific project needs. However, this should get you started.
+
+## Step 1: Configure Product Registration CR
+
+Refer to [Onboarding to Product Registration](./task-1a-onboard-product-registration) for details on how to start with a sample template and associated values file and generate your own product registration too get started.
+
+## Step 2: Configure Common Service Broker CR
+
+Refer to [Onboarding to CSB](./task-1b-onboard-csb) for details on how to create a simple service broker and enable it with the platform common service broker.
+
+## Step 3: Set Up ArgoCD Integration for delivering CR files
+
+Refer to [Using ArgoCD to deliver configuration](./task-1c-argocd) for details on how to create a simple service broker and enable it with the platform common service broker.
+
+## Next Steps
+
+Once you have finished onboarding to core business services, proceed to the [Onboarding to Platform IAM](./task-2-onboard-iam) to continue your integration.

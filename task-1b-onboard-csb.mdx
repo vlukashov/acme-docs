@@ -1,0 +1,249 @@
+---
+title: "Task 1b: Onboard to Common Service Broker (CSB)"
+---
+
+## Overview
+
+Products are required to create a Core Business Services common service broker yaml file with configuration info about the product's service instance broker implementation. The ownership of this file is the product engineering/developement team.
+
+This guide provides step-by-step instructions for integrating your service with the platform Common Service Broker (CSB). This process enables your service's broker to receive and manage instance lifecycle events (e.g., provision, de-provision, update) within the MCSP platform. At its core, the process involves:
+
+- Creation/configuration of your product's service broker.
+- Configuration of a `ServiceBroker` Custom Resource (CR) YAML file.
+
+A service broker is required to support platform-driven service instance trial and purchase provisioning, de-provisioning, try/buy upgrades, add-ons and buy more events. It's also required to support reporting usage metering events in support of contract and pay-go billing. Refer to [Common Service Broker adoption playbook](https://pages.github.acme.com/acme-saas-platform/CSB-Playbook/adoption/adoption-guide/) for the complete documentation that the CSB YAML and CR.
+
+**Note** Your service broker implementation is designed to be used for service instance lifecycle events. These consist of service provision, de-provision, and update. Products use their own infrastructure to provide this. There is no requirement to use the Platform Core Operational Services (ie: tools for cluster provisioning, SRE tooling and other infrastructure) for this. The service broker endpoint needs to be reachable over a mutual TLS (mTLS) link or basic authentication with TLS. Refer to the section below on **implementing Broker API Endpoints** for more details.
+
+## Developers getting started implementation steps
+
+### 1. Understand CSB Concepts
+
+1.  Before configuring your broker, it's important to understand how CSB operates. CSB is a shared, cluster-scoped operator that watches for `ServiceBroker` Custom Resources. When a user provisions, updates, or deprovisions an instance of your service, MCSP sends a request to CSB, which then makes a callback to your service's broker based on your configuration of your `ServiceBroker` CR.
+
+    - **Callbacks**: These are the REST API requests that CSB sends to your service's broker to notify it of lifecycle events. Your broker must implement endpoints to handle these requests.
+    - **Open Service Broker (OSB) API**: CSB's API is a subset of the Open Service Broker API specification. If you have an existing broker for Acme Cloud, it can likely be used with CSB.
+
+1.  Implementing Broker API Endpoints
+    Your service must expose a broker with HTTP endpoints that can accept lifecycle event callbacks from CSB.
+
+        1. **Get started with a sample service broker and test driver** - Refer to [Sample Product Service broker](./examples/go/httpserver/server.go) and [Sample service broker test driver](./examples/go/httpserver/server_test.go) for a Golang version.
+
+        1. **Implement Required CSB API Callbacks** - Your broker must implement the required endpoints as defined in the [CSB API Spec](https://pages.github.acme.com/acme-saas-platform/CSB-Playbook/adoption/apis/api/). This includes handling requests for provisioning, de-provisioning, updating, and enabling/disabling service instances. You can use the [mock provisioner CSB Adapter](https://github.acme.com/acme-saas-platform/common-service-broker-adapter) as a reference.
+
+        1. **Enable authentication for your service broker (basic auth or mTLS)**
+
+           **Enabling with basic authentication Support** - For service broker calls from the CSB to your broker, basic authentication is supported only on Acme Cloud and in staging environments on other hyperscalers. Here a secret is provided with the hyperscaler secrets manager with username and password supplied. Here is the required configuration in the CSB CR for basic auth:
+
+
+           ```yaml
+           # enable BasicAuth for given plan (Optional)
+                basic_auth:
+                secret: <basic-auth-credentials>
+           ```
+
+           ```yaml
+           # secret structure
+            "name": "<secret-name>","description": "BasicAuth credentials"
+            "data": {"username": "<username_value>","password": "<password_value>"}}'
+           ```
+
+           **Enabling with mTLS Support** - CSB authenticates with service brokers using mTLS for production use on hyperscalers other than Acme Cloud. You must configure your broker's HTTP server to trust the CSB Private CA certificate and handle client certificate authentication. The private CA for each environment is stored in the secrets manager for each hyperscaler and can be shared with your account. Mutual authentication (mTLS) is required for production deployments, this more secure authentication method and is requested by setting `want_client_cert` to true in the CSB CR.
+              For details on using mTLS refer to [Service broker mTLS setup](https://pages.github.acme.com/acme-saas-platform/CSB-Playbook/adoption/auth/mtls/service-teams/)
+
+
+
+        4. **Expose your Service** - In most cases, your broker is deployed in your own service cluster. In order for CSB to send callbacks, CSB has to be able to access your broker. Please refer to the following documentation on [exposing your broker](https://pages.github.acme.com/acme-saas-platform/CP-Playbook/knowledge-base/infrastructure/privately-expose-servicebroker-aws-product-clusters/#pre-requisites).
+
+### 2. Configuring the `ServiceBroker` YAML File
+
+The `ServiceBroker` CR is a YAML file that tells CSB how to communicate with your broker. It defines service identifiers, plan details, and callback configurations.
+
+Below is an overview of the key fields. Refer to the example in the next section for a complete structure.
+
+**Required Fields:**
+
+- **`broker_path_element`**: A unique identifier for your service group that forms part of the URL MCSP uses to call CSB. This value **must** match the `service_id` from your Product Registration YAML and have an environment-specific suffix (`-dev`, `-staging`, `-preprod`). The production environment does not use a suffix.
+- **`default_callback`**: Defines the default configuration for callbacks, including key fields like `url_prefix`, `mutual_tls`.
+- **`services[]`**: An array defining one or more services your broker manages.
+  - **`services[].id`**: The unique service identifier. This value **must** match the `serviceID` in your Product Registration CR.
+  - **`services[].name`**: A unique, human-readable name for the service.
+  - **`services[].description`**: A short description of the service. It must be a non-empty string.
+  - **`services[].plans[]...`**: A list of service plans for this service offering. It must contain at least one service plan (see below).
+    - **`services[].plans[].id`**: The unique plan identifier. This value **must** match the `partNumber` in your Product Registration CR.
+    - **`services[].plans[].name`**: A unique, human-readable name for the plan.
+
+<br />
+
+**Note**: The full set of fields and their exact usage can be found [here](https://github.acme.com/acme-saas-platform/common-service-broker/tree/main/docs#api-reference).
+
+#### Example `ServiceBroker` CR
+
+Use the following example as a reference point for your `ServiceBroker` YAML configuration.
+
+**Note** Replace `my-service-name` below to your service name along with related `my-foo-service` and `my-bar-service` references.
+
+```yaml
+apiVersion: cerberus.watson.cloud.acme.com/v1
+kind: ServiceBroker
+metadata:
+  name: { { my-service-name } } # only used as CR name
+  labels:
+    # ------------------ BCDR Labels -----------------------------
+    # The following labels are required for disaster recovery and backup
+    # Add the labels exactly as it is, required for the backup tool to identify the resource
+    # ------------------------------------------------------------
+    bcdr-candidate: t
+    component-name: common-service-broker-cr
+spec:
+  # --------------------------------------------------------------
+  # "service_group" name, used in CSB API prefix, for example: /broker/my-service-name-dev
+  broker_path_element: { { my-service-dev } }
+  # --------------------------------------------------------------
+  # --------------------------------------------------------------
+  # service group level default callback
+  default_callback:
+    # callback config
+    mutual_tls:
+      want_client_cert: true # enable mTLS
+    # callback config (optional)
+    basic_auth:
+      secret: <basic-auth-credentials> #enable BasicAuth
+    url_prefix: >- # your service broker endpoint
+      {{ https://my-service-standard.provisioner.https://github.acme.com/acme-saas-platform/common-service-broker-adapter.acme.com/service-broker }}
+    want_enable_disable_calls: true # required for your service to receive enable/disable callbacks
+    timeout: 30s # change default callback timeout
+  # --------------------------------------------------------------
+  # --------------------------------------------------------------
+  # configurations of services under your service group
+  services:
+    # 60 char limit
+    # Allowed characters: lowercase unicode, digits, dashes, dot, underscores
+    # Validation Regex: ^[\p{Ll}\d_.-]{1,60}$
+    - name: { { my-foo-service } }
+      # service_id used by CSB to lookup service configuration, must be globally unique
+      #
+      # Recommended to set your Service ID same as in your service Product Registration^1
+      # Allowed characters: alpha numerics, dashes, dot, underscores
+      id: { { b4fee43c-0d16-11ed-861d-0242ac120002 } }
+      bindable: false # required, but not actually used for MCSP CSB
+      description: { { Foo Service is part of my-service service group } } # Required
+      # configurations of plans for Foo Service
+      plans:
+        # Allowed characters: lowercase unicode, digits, dashes, dot, underscores
+        # Validation Regex: ^[\p{Ll}\d_.-]+$
+        - name: my-foo-service-lite-plan
+          # plan_id used by CSB to lookup plan configuration, must be globally unique
+          #
+          # Recommended to set your Plan ID same as in your service Product Registration
+          # Allowed characters: alpha numerics, dashes, dot, underscores
+          id: { { 69c5e832-f270-4e31-ad9b-c1652dfe2b4f } }
+          # defines plan specific callbacks
+          callback:
+            # enable mtls for given plan
+            mutual_tls:
+              want_client_cert: true
+            # enable BasicAuth for given plan (Optional)
+            basic_auth:
+              secret: <basic-auth-credentials>
+            # callback endpoint
+            url_prefix: >-
+              {{ https://my-service-standard.provisioner.https://github.acme.com/acme-saas-platform/common-service-broker-adapter.acme.com/service-broker }}
+            want_enable_disable_calls: true
+            timeout: 180s # change to override default 30s callback timeout
+            ocm_alerting:
+              alert_on_error_responses: <none/server-errors/all> # Default none.
+              enabled: <true/false> # Default true if not specified.
+              ocm_integration_URL: <your-key> # No Default. Required for alerting.
+            retry_http_5xx_errors: <true/false> # Default true if not specified.
+          # defines which plan_ids this current plan can be updated to
+          upgradeable_to:
+            - 4cb46f84-7a1e-4b26-a674-aa5d53e33d7a
+          # Repeats previous section
+        - name: my-foo-service-standard-plan
+          id: { { 4cb46f84-7a1e-4b26-a674-aa5d53e33d7a } }
+          metadata:
+            costs:
+              - unit: api calls
+                unit_id: API_CALLS_PER_MONTH
+          callback:
+            mutual_tls:
+              want_client_cert: true
+            basic_auth:
+              secret: <basic-auth-credentials>
+            url_prefix: >-
+              {{ https://my-service-standard.provisioner.https://github.acme.com/acme-saas-platform/common-service-broker-adapter.acme.com/service-broker }}
+            want_enable_disable_calls: true
+            timeout: 180s # change callback timeout
+      # You can define another service under my-service Service Group called "bar"
+    - name: { { my-bar-service } }
+      id: { { 20a91b72-9b2a-4e68-8ee7-0736bb472bec } }
+      bindable: false
+      description: { { Bar Service is part of my-service service group } }
+      plans:
+        - name: my-bar-service-enterprise-plan
+          id: { { 6faf70eb-8eb9-486c-b632-1351979f302c } }
+          callback:
+            mutual_tls:
+              want_client_cert: true
+            basic_auth:
+              secret: <basic-auth-credentials>
+            url_prefix: >-
+              {{ https://my-bar-service.https://github.acme.com/acme-saas-platform/common-service-broker-adapter.acme.com/service-broker }}
+            want_enable_disable_calls: true
+            ocm_alerting:
+              alert_on_error_responses: <none/server-errors/all> # Default none.
+              enabled: <true/false> # Default true if not specified.
+              ocm_integration_URL: <your-key> # No Default. Required for alerting.s
+            retry_http_5xx_errors: <true/false> # Default true if not specified.
+            timeout: 30s
+```
+
+### 3. Deploy the `ServiceBroker` CR
+
+Once your YAML file is complete, you must create the resource in your service's dedicated namespace in the MCSP Data Plane cluster.
+
+- **(Recommended)** Use ArgoCD and the MCSP. Refer to [Using ArgoCD to deliver configuration](./task-1c-argocd) to manage the deployment of your CSB CR using Argocd.
+- **(For quick validation)** You can manually apply the configuration using `oc` or `kubectl`:
+  `kubectl apply -n <your-namespace> -f <your-broker-file.yaml>`
+
+### 4. Validate the Configuration
+
+After applying the CR, CSB will asynchronously validate it. You can check the acceptance status by inspecting the resource.
+
+1. **Fetch the CR Status** - Use the following command:
+
+`oc get servicebroker <your-cr-name> -n <your-namespace> -o yaml`
+
+2. **Check the `status.condition` field:**
+
+- **Success**: A message stating `The change has been applied.` with a state of `active` indicates your configuration was accepted by CSB.
+
+Example:
+
+```yaml
+....
+- message: The change has been applied.
+  observedGeneration: xxx
+  pod: common-service-broker-fc864bb96-sppqb
+  state: active
+  timestamp: '2022-07-26T18:31:16Z'
+```
+
+- **Failure**: A message with a status of `state: error` indicates your configuration was rejected by CSB.
+
+Example:
+
+```yaml
+....
+- message: >-
+  some error description
+  observedGeneration: xxx
+  pod: common-service-broker-fc864bb96-gxgn9
+  state: error
+  timestamp: '2022-07-24T21:35:07Z'
+```
+
+## Next Steps
+
+Once you have setup a CSB yaml CR file and your service broker is validated, proceed to the [Onboarding to Platform IAM](./task-2-onboard-iam) task to continue onboarding.
